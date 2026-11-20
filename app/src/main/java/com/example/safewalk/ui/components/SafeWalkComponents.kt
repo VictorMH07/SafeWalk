@@ -12,8 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.safewalk.data.local.EstadoTrayecto
 
-enum class EstadoTrayecto { ACTIVO, COMPLETADO, CANCELADO }
+
 
 /** Etiqueta de estado para historial y pantalla de trayecto. */
 @Composable
