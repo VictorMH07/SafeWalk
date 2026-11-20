@@ -1,6 +1,7 @@
 package com.example.safewalk.ui
 
 import android.app.Application
+import android.location.Location
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.safewalk.data.local.Contacto
@@ -8,13 +9,19 @@ import com.example.safewalk.data.local.EstadoTrayecto
 import com.example.safewalk.data.local.SafeWalkDatabase
 import com.example.safewalk.data.local.Trayecto
 import com.example.safewalk.data.local.Usuario
+import com.example.safewalk.data.location.Punto
+import com.example.safewalk.data.location.UbicacionClient
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -117,5 +124,38 @@ class SafeWalkViewModel(app: Application) : AndroidViewModel(app) {
                 actual.copy(nombre = nombre.trim(), telefono = telefono.trim(), correo = correo.trim())
             )
         }
+    }
+
+    // ---------- Ubicación ----------
+
+    private val ubicacionClient = UbicacionClient(app)
+    private var seguimiento: Job? = null
+
+    private val _ubicacion = MutableStateFlow<Location?>(null)
+    val ubicacion: StateFlow<Location?> = _ubicacion.asStateFlow()
+
+    private val _recorrido = MutableStateFlow<List<Punto>>(emptyList())
+    val recorrido: StateFlow<List<Punto>> = _recorrido.asStateFlow()
+
+    /** Empieza a recibir la ubicación. Llamar solo si el permiso ya fue concedido. */
+    fun iniciarSeguimiento() {
+        if (seguimiento?.isActive == true) return
+        seguimiento = viewModelScope.launch {
+            try {
+                ubicacionClient.actualizaciones().collect { loc ->
+                    _ubicacion.value = loc
+                    _recorrido.update { it + Punto(loc.latitude, loc.longitude, loc.time) }
+                }
+            } catch (e: SecurityException) {
+                // El permiso fue revocado: se detiene el seguimiento sin cerrar la app.
+            }
+        }
+    }
+
+    fun detenerSeguimiento() {
+        seguimiento?.cancel()
+        seguimiento = null
+        _ubicacion.value = null
+        _recorrido.value = emptyList()
     }
 }

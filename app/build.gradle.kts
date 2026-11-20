@@ -39,6 +39,7 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)
