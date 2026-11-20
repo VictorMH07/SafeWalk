@@ -4,8 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.example.safewalk.ui.SafeWalkApp
 import com.example.safewalk.ui.SafeWalkViewModel
-import com.example.safewalk.ui.home.HomeScreen
 import com.example.safewalk.ui.theme.SafeWalkTheme
 
 class MainActivity : ComponentActivity() {
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SafeWalkTheme {
-                HomeScreen(vm)
+                SafeWalkApp(vm)
             }
         }
     }

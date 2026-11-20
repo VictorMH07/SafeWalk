@@ -3,6 +3,7 @@ package com.example.safewalk.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.safewalk.data.local.Contacto
 import com.example.safewalk.data.local.EstadoTrayecto
 import com.example.safewalk.data.local.SafeWalkDatabase
 import com.example.safewalk.data.local.Trayecto
@@ -31,6 +32,8 @@ class SafeWalkViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---------- Trayectos ----------
+
     val historial: StateFlow<List<Trayecto>> = usuarioActual
         .flatMapLatest { db.trayectoDao().observarHistorial(it.id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -39,11 +42,16 @@ class SafeWalkViewModel(app: Application) : AndroidViewModel(app) {
         .flatMapLatest { db.trayectoDao().observarActivo(it.id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun iniciarTrayecto(origen: String, destino: String) {
+    fun iniciarTrayecto(origen: String, destino: String, contactoId: Long?) {
         viewModelScope.launch {
             val usuario = usuarioActual.first()
             db.trayectoDao().insertar(
-                Trayecto(usuarioId = usuario.id, origen = origen.trim(), destino = destino.trim())
+                Trayecto(
+                    usuarioId = usuario.id,
+                    contactoId = contactoId,
+                    origen = origen.trim(),
+                    destino = destino.trim()
+                )
             )
         }
     }
@@ -52,6 +60,61 @@ class SafeWalkViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             db.trayectoDao().actualizar(
                 trayecto.copy(fin = System.currentTimeMillis(), estado = EstadoTrayecto.COMPLETADO)
+            )
+        }
+    }
+
+    // ---------- Contactos de confianza ----------
+
+    val contactos: StateFlow<List<Contacto>> = usuarioActual
+        .flatMapLatest { db.contactoDao().observarContactos(it.id) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Si [existente] es null crea un contacto nuevo; si no, lo actualiza. */
+    fun guardarContacto(existente: Contacto?, nombre: String, telefono: String, parentesco: String) {
+        viewModelScope.launch {
+            if (existente == null) {
+                val usuario = usuarioActual.first()
+                db.contactoDao().insertar(
+                    Contacto(
+                        usuarioId = usuario.id,
+                        nombre = nombre.trim(),
+                        telefono = telefono.trim(),
+                        parentesco = parentesco.trim()
+                    )
+                )
+            } else {
+                db.contactoDao().actualizar(
+                    existente.copy(
+                        nombre = nombre.trim(),
+                        telefono = telefono.trim(),
+                        parentesco = parentesco.trim()
+                    )
+                )
+            }
+        }
+    }
+
+    fun alternarFavorito(contacto: Contacto) {
+        viewModelScope.launch {
+            db.contactoDao().actualizar(contacto.copy(esFavorito = !contacto.esFavorito))
+        }
+    }
+
+    fun eliminarContacto(contacto: Contacto) {
+        viewModelScope.launch { db.contactoDao().eliminar(contacto) }
+    }
+
+    // ---------- Perfil ----------
+
+    val usuario: StateFlow<Usuario?> = db.usuarioDao().observarUsuario()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun guardarPerfil(nombre: String, telefono: String, correo: String) {
+        viewModelScope.launch {
+            val actual = usuarioActual.first()
+            db.usuarioDao().actualizar(
+                actual.copy(nombre = nombre.trim(), telefono = telefono.trim(), correo = correo.trim())
             )
         }
     }
