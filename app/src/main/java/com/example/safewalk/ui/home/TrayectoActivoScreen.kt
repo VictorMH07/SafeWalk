@@ -15,6 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,6 +30,7 @@ import com.example.safewalk.data.location.Punto
 import com.example.safewalk.ui.components.BotonLlegueBien
 import com.example.safewalk.ui.components.MapaRecorrido
 import com.example.safewalk.ui.components.TrayectoCard
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -33,8 +39,31 @@ import kotlin.math.roundToInt
 private fun fechaCorta(ms: Long): String =
     SimpleDateFormat("d MMM, h:mm a", Locale("es", "CO")).format(Date(ms))
 
-private fun horaCompleta(ms: Long): String =
-    SimpleDateFormat("h:mm:ss a", Locale("es", "CO")).format(Date(ms))
+/** Suma la distancia entre puntos consecutivos; ignora saltos menores a 3 m (ruido del GPS). */
+private fun distanciaTotal(puntos: List<Punto>): Float {
+    var total = 0f
+    val resultado = FloatArray(1)
+    for (i in 1 until puntos.size) {
+        val a = puntos[i - 1]
+        val b = puntos[i]
+        Location.distanceBetween(a.latitud, a.longitud, b.latitud, b.longitud, resultado)
+        if (resultado[0] >= 3f) total += resultado[0]
+    }
+    return total
+}
+
+private fun formatearDistancia(metros: Float): String =
+    if (metros < 1000f) "${metros.roundToInt()} m"
+    else String.format(Locale("es", "CO"), "%.1f km", metros / 1000f)
+
+private fun formatearDuracion(ms: Long): String {
+    val minutos = (ms / 60_000).coerceAtLeast(0)
+    return when {
+        minutos < 1 -> "menos de 1 min"
+        minutos < 60 -> "$minutos min"
+        else -> "${minutos / 60} h ${minutos % 60} min"
+    }
+}
 
 /** Pantalla del trayecto en curso: mapa a pantalla completa y tarjetas abajo. */
 @Composable
@@ -48,6 +77,17 @@ fun TrayectoActivoScreen(
     onLlegueBien: () -> Unit,
     padding: PaddingValues
 ) {
+    // Reloj que se actualiza cada 15 segundos para mostrar el tiempo transcurrido.
+    var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(15_000)
+            ahora = System.currentTimeMillis()
+        }
+    }
+
+    val metros = remember(recorrido) { distanciaTotal(recorrido) }
+
     Box(Modifier.fillMaxSize().padding(padding)) {
         MapaRecorrido(recorrido = recorrido, modifier = Modifier.fillMaxSize())
 
@@ -67,7 +107,8 @@ fun TrayectoActivoScreen(
             InfoTrayecto(
                 contacto = contacto,
                 ubicacion = ubicacion,
-                puntos = recorrido.size,
+                duracion = formatearDuracion(ahora - trayecto.inicio),
+                distancia = if (recorrido.size > 1) formatearDistancia(metros) else null,
                 tienePermiso = tienePermiso,
                 onPermitir = onPermitir
             )
@@ -80,7 +121,8 @@ fun TrayectoActivoScreen(
 private fun InfoTrayecto(
     contacto: Contacto?,
     ubicacion: Location?,
-    puntos: Int,
+    duracion: String,
+    distancia: String?,
     tienePermiso: Boolean,
     onPermitir: () -> Unit
 ) {
@@ -89,10 +131,17 @@ private fun InfoTrayecto(
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             if (contacto != null) {
                 Text("Contacto de confianza: ${contacto.nombre}", style = MaterialTheme.typography.bodyMedium)
             }
+
+            val progreso = if (distancia != null) "Lleva $duracion · $distancia recorridos" else "Lleva $duracion"
+            Text(progreso, style = MaterialTheme.typography.titleMedium)
+
             if (!tienePermiso) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -106,7 +155,7 @@ private fun InfoTrayecto(
                 Text("Obteniendo ubicación…", style = MaterialTheme.typography.bodyMedium)
             } else {
                 Text(
-                    "Precisión ±${ubicacion.accuracy.roundToInt()} m · ${horaCompleta(ubicacion.time)} · $puntos puntos",
+                    "Precisión del GPS: ±${ubicacion.accuracy.roundToInt()} m",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
