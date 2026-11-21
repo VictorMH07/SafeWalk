@@ -23,7 +23,9 @@ private val LightColors = lightColorScheme(
     onSurface = InkLight,
     surfaceVariant = SurfaceVariantLight,
     error = CoralAlert,
-    onError = Color.White
+    onError = Color.White,
+    primaryContainer = Color(0xFFCCE8EA),
+    onPrimaryContainer = Color(0xFF00363B)
 )
 
 private val DarkColors = darkColorScheme(
@@ -37,7 +39,11 @@ private val DarkColors = darkColorScheme(
     onSurface = InkDark,
     surfaceVariant = NightSurfaceVariant,
     error = CoralNight,
-    onError = Color.Black
+    onError = Color.Black,
+    primaryContainer = Color(0xFF0E3B52),
+    onPrimaryContainer = Color(0xFFCBE8FA),
+    secondaryContainer = Color(0xFF16401A),
+    onSecondaryContainer = Color(0xFFB7EFA0)
 )
 
 private val SafeWalkShapes = Shapes(

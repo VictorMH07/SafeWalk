@@ -29,6 +29,11 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.platform.LocalContext
+import com.example.safewalk.R
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.MapProperties
 
 // Posición inicial del mapa mientras llega la primera ubicación (Ipiales, Nariño).
 private val POSICION_INICIAL = LatLng(0.8303, -77.6447)
@@ -40,6 +45,15 @@ fun MapaRecorrido(recorrido: List<Punto>, modifier: Modifier = Modifier) {
         position = CameraPosition.fromLatLngZoom(POSICION_INICIAL, 13f)
     }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val oscuro = isSystemInDarkTheme()
+    val propiedades = remember (oscuro) {
+        MapProperties(
+            mapStyleOptions = if (oscuro) {
+                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+            } else null
+        )
+    }
     val puntos = recorrido.map { LatLng(it.latitud, it.longitud) }
     val ultimo = puntos.lastOrNull()
     var centrado by remember { mutableStateOf(false) }
@@ -59,6 +73,7 @@ fun MapaRecorrido(recorrido: List<Punto>, modifier: Modifier = Modifier) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = camara,
+            properties = propiedades,
             uiSettings = MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false)
         ) {
             if (puntos.size > 1) {

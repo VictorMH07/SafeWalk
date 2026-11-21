@@ -5,8 +5,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,13 +33,18 @@ fun SafeWalkApp(vm: SafeWalkViewModel) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar (containerColor = MaterialTheme.colorScheme.surface) {
                 Seccion.entries.forEach { item ->
                     NavigationBarItem(
                         selected = seccion == item,
                         onClick = { seccion = item },
                         icon = { Icon(item.icono, contentDescription = item.titulo) },
-                        label = { Text(item.titulo) }
+                        label = { Text(item.titulo) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                        )
                     )
                 }
             }
