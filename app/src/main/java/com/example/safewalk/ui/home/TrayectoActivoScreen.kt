@@ -9,15 +9,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -75,8 +80,10 @@ fun TrayectoActivoScreen(
     tienePermiso: Boolean,
     onPermitir: () -> Unit,
     onLlegueBien: () -> Unit,
+    onCancelar: () -> Unit,
     padding: PaddingValues
 ) {
+    var confirmando by remember { mutableStateOf(false) }
     // Reloj que se actualiza cada 15 segundos para mostrar el tiempo transcurrido.
     var ahora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -113,7 +120,34 @@ fun TrayectoActivoScreen(
                 onPermitir = onPermitir
             )
             BotonLlegueBien(onClick = onLlegueBien)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                TextButton(
+                    onClick = { confirmando = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Cancelar trayecto") }
+            }
         }
+    }
+
+    if (confirmando) {
+        AlertDialog(
+            onDismissRequest = { confirmando = false },
+            title = { Text("¿Cancelar el trayecto?") },
+            text = { Text("Quedará en el historial como cancelado.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { confirmando = false; onCancelar() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Sí, cancelar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmando = false }) { Text("Seguir en el trayecto") }
+            }
+        )
     }
 }
 

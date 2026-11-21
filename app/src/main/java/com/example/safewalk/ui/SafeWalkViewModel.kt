@@ -71,6 +71,14 @@ class SafeWalkViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun cancelarTrayecto(trayecto: Trayecto) {
+        viewModelScope.launch {
+            db.trayectoDao().actualizar(
+                trayecto.copy(fin = System.currentTimeMillis(), estado = EstadoTrayecto.CANCELADO)
+            )
+        }
+    }
+
     // ---------- Contactos de confianza ----------
 
     val contactos: StateFlow<List<Contacto>> = usuarioActual

@@ -98,6 +98,7 @@ fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
             tienePermiso = tienePermiso,
             onPermitir = { pedirPermiso.launch(PERMISOS_UBICACION) },
             onLlegueBien = { vm.llegueBien(trayectoActivo) },
+            onCancelar = { vm.cancelarTrayecto(trayectoActivo) },
             padding = padding
         )
         return
