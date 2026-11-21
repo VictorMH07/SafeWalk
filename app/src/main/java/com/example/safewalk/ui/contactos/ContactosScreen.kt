@@ -197,6 +197,10 @@ private fun ContactoDialog(
     var telefono by remember { mutableStateOf(inicial?.telefono ?: "") }
     var parentesco by remember { mutableStateOf(inicial?.parentesco ?: "") }
 
+    val digitos = telefono.count { it.isDigit() }
+    val telefonoInvalido = telefono.isNotBlank() && digitos < 10
+    val puedeGuardar = nombre.isNotBlank() && telefono.isNotBlank() && !telefonoInvalido
+
     AlertDialog(
         onDismissRequest = onCancelar,
         title = { Text(if (inicial == null) "Nuevo contacto" else "Editar contacto") },
@@ -215,6 +219,10 @@ private fun ContactoDialog(
                     onValueChange = { telefono = it },
                     label = { Text("Teléfono") },
                     singleLine = true,
+                    isError = telefonoInvalido,
+                    supportingText = {
+                        if (telefonoInvalido) Text("Ingresa al menos 10 dígitos")
+                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -231,7 +239,7 @@ private fun ContactoDialog(
         confirmButton = {
             TextButton(
                 onClick = { onGuardar(nombre, telefono, parentesco) },
-                enabled = nombre.isNotBlank() && telefono.isNotBlank()
+                enabled = puedeGuardar
             ) { Text("Guardar") }
         },
         dismissButton = { TextButton(onClick = onCancelar) { Text("Cancelar") } }

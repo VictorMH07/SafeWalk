@@ -25,7 +25,6 @@ abstract class SafeWalkDatabase : RoomDatabase() {
                     SafeWalkDatabase::class.java,
                     "safewalk.db"
                 )
-                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build()
                     .also { instancia = it }
             }

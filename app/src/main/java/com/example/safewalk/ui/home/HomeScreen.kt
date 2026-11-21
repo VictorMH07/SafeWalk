@@ -139,6 +139,9 @@ private fun NuevoTrayecto(
     var destino by remember { mutableStateOf("") }
     var elegido by remember { mutableStateOf<Long?>(null) }
 
+    val iguales = origen.isNotBlank() && origen.trim().equals(destino.trim(), ignoreCase = true)
+    val puedeIniciar = origen.isNotBlank() && destino.isNotBlank() && !iguales
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -159,6 +162,10 @@ private fun NuevoTrayecto(
                 onValueChange = { destino = it },
                 label = { Text("Destino") },
                 singleLine = true,
+                isError = iguales,
+                supportingText = {
+                    if (iguales) Text("El origen y el destino no pueden ser iguales")
+                },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -188,7 +195,7 @@ private fun NuevoTrayecto(
                     destino = ""
                     elegido = null
                 },
-                enabled = origen.isNotBlank() && destino.isNotBlank(),
+                enabled = puedeIniciar,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = MaterialTheme.shapes.large
             ) {
