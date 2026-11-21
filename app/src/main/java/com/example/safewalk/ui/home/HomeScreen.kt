@@ -50,6 +50,18 @@ private val PERMISOS_UBICACION = arrayOf(
 private fun formatear(ms: Long): String =
     SimpleDateFormat("d MMM, h:mm a", Locale("es", "CO")).format(Date(ms))
 
+private fun formatearHora(ms: Long): String =
+    SimpleDateFormat("h:mm a", Locale("es", "CO")).format(Date(ms))
+
+/** "21 nov, 2:28 a. m. – 2:45 a. m." (si termina otro día, incluye también la fecha de fin). */
+private fun rangoHorario(t: Trayecto): String {
+    val inicio = formatear(t.inicio)
+    val fin = t.fin ?: return inicio
+    val dia = SimpleDateFormat("yyyyMMdd", Locale.US)
+    val mismoDia = dia.format(Date(t.inicio)) == dia.format(Date(fin))
+    return "$inicio – ${if (mismoDia) formatearHora(fin) else formatear(fin)}"
+}
+
 @Composable
 fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
     val historial by vm.historial.collectAsState()
@@ -123,7 +135,7 @@ fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
             TrayectoCard(
                 origen = t.origen,
                 destino = t.destino,
-                fechaHora = formatear(t.inicio),
+                fechaHora = rangoHorario(t),
                 estado = t.estado
             )
         }
