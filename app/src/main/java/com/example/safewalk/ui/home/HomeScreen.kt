@@ -2,7 +2,6 @@ package com.example.safewalk.ui.home
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -19,9 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,12 +37,10 @@ import com.example.safewalk.data.local.Contacto
 import com.example.safewalk.data.local.EstadoTrayecto
 import com.example.safewalk.data.local.Trayecto
 import com.example.safewalk.ui.SafeWalkViewModel
-import com.example.safewalk.ui.components.BotonLlegueBien
 import com.example.safewalk.ui.components.TrayectoCard
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.math.roundToInt
 
 private val PERMISOS_UBICACION = arrayOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -54,9 +49,6 @@ private val PERMISOS_UBICACION = arrayOf(
 
 private fun formatear(ms: Long): String =
     SimpleDateFormat("d MMM, h:mm a", Locale("es", "CO")).format(Date(ms))
-
-private fun formatearHora(ms: Long): String =
-    SimpleDateFormat("h:mm:ss a", Locale("es", "CO")).format(Date(ms))
 
 @Composable
 fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
@@ -84,6 +76,21 @@ fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
         if (hayActivo && tienePermiso) vm.iniciarSeguimiento() else vm.detenerSeguimiento()
     }
 
+    val trayectoActivo = activo
+    if (trayectoActivo != null) {
+        TrayectoActivoScreen(
+            trayecto = trayectoActivo,
+            contacto = contactos.firstOrNull { it.id == trayectoActivo.contactoId },
+            ubicacion = ubicacion,
+            recorrido = recorrido,
+            tienePermiso = tienePermiso,
+            onPermitir = { pedirPermiso.launch(PERMISOS_UBICACION) },
+            onLlegueBien = { vm.llegueBien(trayectoActivo) },
+            padding = padding
+        )
+        return
+    }
+
     LazyColumn(
         modifier = Modifier.padding(padding).padding(horizontal = 20.dp),
         contentPadding = PaddingValues(vertical = 20.dp),
@@ -92,39 +99,13 @@ fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
         item { Text("SafeWalk", style = MaterialTheme.typography.headlineMedium) }
 
         item {
-            val trayecto = activo
-            if (trayecto == null) {
-                NuevoTrayecto(
-                    contactos = contactos,
-                    onIniciar = { origen, destino, contactoId ->
-                        vm.iniciarTrayecto(origen, destino, contactoId)
-                        if (!tienePermiso) pedirPermiso.launch(PERMISOS_UBICACION)
-                    }
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Trayecto en curso", style = MaterialTheme.typography.titleLarge)
-                    TrayectoCard(
-                        origen = trayecto.origen,
-                        destino = trayecto.destino,
-                        fechaHora = formatear(trayecto.inicio),
-                        estado = EstadoTrayecto.ACTIVO
-                    )
-                    val contacto = contactos.firstOrNull { it.id == trayecto.contactoId }
-                    if (contacto != null) {
-                        Text(
-                            "Contacto de confianza: ${contacto.nombre}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    if (tienePermiso) {
-                        UbicacionCard(ubicacion = ubicacion, puntos = recorrido.size)
-                    } else {
-                        PermisoUbicacionCard(onPermitir = { pedirPermiso.launch(PERMISOS_UBICACION) })
-                    }
-                    BotonLlegueBien(onClick = { vm.llegueBien(trayecto) })
+            NuevoTrayecto(
+                contactos = contactos,
+                onIniciar = { origen, destino, contactoId ->
+                    vm.iniciarTrayecto(origen, destino, contactoId)
+                    if (!tienePermiso) pedirPermiso.launch(PERMISOS_UBICACION)
                 }
-            }
+            )
         }
 
         item { Text("Historial", style = MaterialTheme.typography.titleLarge) }
@@ -145,59 +126,6 @@ fun HomeScreen(vm: SafeWalkViewModel, padding: PaddingValues) {
                 fechaHora = formatear(t.inicio),
                 estado = t.estado
             )
-        }
-    }
-}
-
-@Composable
-private fun UbicacionCard(ubicacion: Location?, puntos: Int) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                "Ubicación actual",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            if (ubicacion == null) {
-                Text(
-                    "Obteniendo ubicación…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            } else {
-                val lat = String.format(Locale.US, "%.5f", ubicacion.latitude)
-                val lng = String.format(Locale.US, "%.5f", ubicacion.longitude)
-                val color = MaterialTheme.colorScheme.onSecondaryContainer
-                Text("Latitud: $lat   Longitud: $lng", style = MaterialTheme.typography.bodyMedium, color = color)
-                Text("Precisión: ±${ubicacion.accuracy.roundToInt()} m", style = MaterialTheme.typography.bodyMedium, color = color)
-                Text("Última actualización: ${formatearHora(ubicacion.time)}", style = MaterialTheme.typography.bodyMedium, color = color)
-                Text("Puntos registrados: $puntos", style = MaterialTheme.typography.bodyMedium, color = color)
-            }
-        }
-    }
-}
-
-@Composable
-private fun PermisoUbicacionCard(onPermitir: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Activa tu ubicación", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "SafeWalk necesita tu ubicación para seguir el recorrido mientras tu trayecto está activo.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            OutlinedButton(onClick = onPermitir, modifier = Modifier.fillMaxWidth()) {
-                Text("Permitir ubicación")
-            }
         }
     }
 }
